@@ -181,6 +181,13 @@ if ( $mysql_stop ) {
   mysql_lock($mysql_dbh);
 }
 
+
+#
+# PostgreSQL
+#
+
+
+
 if ( $pre_freeze_command ) {
   run_command([$pre_freeze_command]);
 }
@@ -382,6 +389,40 @@ sub mongo_start {
   if ( $result != 0 ) {
     warn "$Prog: Unable to start mongod: $? $!";
   }
+}
+
+
+
+#
+# PostgreSQL
+#
+sub postgres_connect {
+  my ($postgres_host, $postgres_socket, $postgres_username, $postgres_password) = @_;
+  my $dsn_extra = "";
+
+  require DBI;
+  DBI->import;
+
+  ($postgres_host, $postgres_username, $postgres_password, $postgres_socket) = read_mycnf(
+      $postgres_host, $postgres_username, $postgres_password, $postgres_socket
+  );
+
+  if( defined($postgres_socket) ) {
+    $dsn_extra .= "postgres_socket=$postgres_socket;";
+  }
+
+  $postgres_host ||= 'localhost';
+  
+  $Debug and warn "$Prog: ", scalar localtime,
+                  ": Postgres connect as $postgres_username\n";
+
+  my $mysql_dbh = DBI->connect("DBI:Pg:;${dsn_extra}host=$postgres_host",
+                         $postgres_username, $postgres_password)
+    or die "$Prog: ERROR: Unable to connect to Postgres"
+         . " on $postgres_host as $postgres_username";
+
+  return $postgres_dbh;
+
 }
 
 
